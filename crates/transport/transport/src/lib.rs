@@ -30,4 +30,5 @@ pub mod prelude {
     pub use crate::packet::compression::{CompressionAlgorithm, CompressionConfig};
     pub use crate::packet::nack::PacketNackSettings;
     pub use crate::packet::priority_manager::{PriorityConfig, PriorityManager};
+    pub use crate::plugin::{ObservePacketAdmissions, PacketAdmitted};
 }
