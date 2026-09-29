@@ -10,6 +10,7 @@ use crate::packet::message::{FragmentData, MessageAck, ReceiveMessage, SingleDat
 use crate::packet::packet_type::PacketType;
 #[cfg(feature = "test_utils")]
 use crate::prelude::{AppChannelExt, ChannelMode, ChannelSettings};
+use alloc::vec::Vec;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
 use bevy_ecs::schedule::IntoScheduleConfigs;
@@ -27,6 +28,7 @@ use lightyear_core::tick::Tick;
 use lightyear_link::{Link, LinkPlugin, LinkSystems, Linked};
 use lightyear_serde::reader::{ReadInteger, Reader};
 use lightyear_serde::{SerializationError, ToBytes};
+#[cfg(feature = "std")]
 use lightyear_utils::adaptive_for_each_mut;
 #[cfg(feature = "metrics")]
 use lightyear_utils::timer_gauge;
@@ -68,6 +70,68 @@ pub struct PacketAcked {
 pub struct PacketLost {
     pub entity: Entity,
     pub packet_id: PacketId,
+}
+
+/// Enables [`PacketAdmitted`] events for packets queued by this [`Transport`].
+///
+/// Without this component, admission does not allocate event metadata or queue events.
+/// When enabled, each data packet allocates a channel list and queues one deferred ECS
+/// event; ACK-only packets queue an event with an empty list. No packet payload is
+/// copied or exposed. Removing the component disables subsequent notifications, but
+/// does not cancel events already queued.
+///
+/// ```
+/// use bevy_ecs::prelude::*;
+/// use lightyear_transport::prelude::{ObservePacketAdmissions, PacketAdmitted, Transport};
+///
+/// fn count_admitted(event: On<PacketAdmitted>, mut count: ResMut<PacketCount>) {
+///     count.0 += 1;
+///     // Repeated channel IDs represent multiple messages in the same packet.
+///     for channel in &event.channels {
+///         let _ = channel;
+///     }
+/// }
+///
+/// #[derive(Resource, Default)]
+/// struct PacketCount(usize);
+///
+/// let mut world = World::new();
+/// world.init_resource::<PacketCount>();
+/// world.add_observer(count_admitted);
+/// world.spawn((Transport::default(), ObservePacketAdmissions));
+/// ```
+#[derive(Component, Default, Debug, Clone, Copy)]
+pub struct ObservePacketAdmissions;
+
+/// Metadata captured after a transport packet enters [`Link::send`].
+///
+/// Emitted only for entities with [`ObservePacketAdmissions`]. Data packets have
+/// passed transport bandwidth admission; ACK-only packets bypass that limit as
+/// usual. Denied or unsuccessfully staged packets emit no event. Host-client
+/// messages do not enter `Link.send` and emit no event either.
+///
+/// Metadata is captured before connection-layer encryption and I/O submission, not evidence of
+/// a successful socket send, peer receipt, or an acknowledgement. [`PacketAcked`]
+/// and [`PacketLost`] report separate, later outcomes.
+///
+/// Transport may prepare packets on parallel workers. Events are queued through
+/// commands, and Bevy observers run when those commands are applied, after the
+/// send system finishes. Events for one entity follow admission order; no order
+/// across entities is promised. Observers may borrow the event during their call
+/// or retain their own metadata copy. The event carries no payload or admission controls.
+#[derive(EntityEvent, Debug, Clone)]
+pub struct PacketAdmitted {
+    /// The entity containing the transport and link that admitted the packet.
+    pub entity: Entity,
+    /// Transport-local packet ID, which wraps and is not a global identifier.
+    pub packet_id: PacketId,
+    /// Encoded packet bytes, including the transport header and any packet
+    /// compression, before connection encryption or I/O framing.
+    pub bytes: usize,
+    /// One channel ID per message or message fragment carried by this packet,
+    /// in packet order. Repeated channel IDs are retained; this is not a set.
+    /// The list is empty for an ACK-only packet.
+    pub channels: Vec<ChannelId>,
 }
 
 pub struct TransportPlugin;
@@ -400,14 +464,28 @@ impl TransportPlugin {
     fn buffer_send(
         real_time: Res<Time<Real>>,
         timeline: Res<LocalTimeline>,
-        mut query: Query<(&mut Link, &mut Transport, Option<&mut HostClient>), With<Linked>>,
+        #[cfg(feature = "std")] par_commands: ParallelCommands,
+        #[cfg(not(feature = "std"))] mut commands: Commands,
+        mut query: Query<
+            (
+                Entity,
+                &mut Link,
+                &mut Transport,
+                Option<&mut HostClient>,
+                Has<ObservePacketAdmissions>,
+            ),
+            With<Linked>,
+        >,
         channel_registry: Res<ChannelRegistry>,
     ) {
         #[cfg(feature = "metrics")]
         let _timer = timer_gauge!("transport/send");
         let tick = timeline.tick();
+        #[cfg(feature = "std")]
         let query = adaptive_for_each_mut!(query);
-        query.for_each(|(mut link, mut transport, host_client)| {
+        #[cfg(not(feature = "std"))]
+        let query = query.iter_mut();
+        query.for_each(|(entity, mut link, mut transport, host_client, observe_admissions)| {
             // allow split borrows
             let transport = &mut *transport;
             let mtu = link.mtu();
@@ -529,6 +607,18 @@ impl TransportPlugin {
                     .packet_manager
                     .header_manager
                     .commit_send_packet(packet_id, real_time.elapsed());
+                if observe_admissions {
+                    let event = PacketAdmitted {
+                        entity,
+                        packet_id,
+                        bytes: packet_len,
+                        channels: packet.messages.iter().map(|metadata| metadata.channel).collect(),
+                    };
+                    #[cfg(feature = "std")]
+                    par_commands.command_scope(|mut commands| commands.trigger(event));
+                    #[cfg(not(feature = "std"))]
+                    commands.trigger(event);
+                }
 
                 #[cfg(feature = "metrics")]
                 if let Some(compression_info) = packet.compression {
@@ -618,6 +708,18 @@ impl TransportPlugin {
                             .packet_manager
                             .header_manager
                             .commit_send_ack_only(packet_id);
+                        if observe_admissions {
+                            let event = PacketAdmitted {
+                                entity,
+                                packet_id,
+                                bytes: packet_len,
+                                channels: Vec::new(),
+                            };
+                            #[cfg(feature = "std")]
+                            par_commands.command_scope(|mut commands| commands.trigger(event));
+                            #[cfg(not(feature = "std"))]
+                            commands.trigger(event);
+                        }
                         total_bytes_sent += packet_len as u32;
                     }
                     Err(error) => error!(?error, "failed to stage ACK-only packet"),
@@ -718,6 +820,269 @@ mod tests {
     struct DiscardChannel;
     struct SmallMtuChannel;
     struct AckBeforeTimeoutChannel;
+
+    #[derive(Resource, Default)]
+    struct Admissions(Vec<PacketAdmitted>);
+
+    fn admission_test_app(registry: ChannelRegistry) -> App {
+        let mut app = App::new();
+        app.add_plugins(bevy_app::TaskPoolPlugin::default());
+        app.insert_resource(registry);
+        app.init_resource::<Time<Real>>();
+        app.init_resource::<LocalTimeline>();
+        app.init_resource::<Admissions>();
+        app.add_observer(
+            |event: On<PacketAdmitted>, mut events: ResMut<Admissions>| {
+                events.0.push(event.event().clone());
+            },
+        );
+        app
+    }
+
+    /// Decode actual wire contents independently of packet-builder metadata.
+    fn packet_channels(packet: Bytes) -> (PacketId, Vec<ChannelId>) {
+        let mut reader = Reader::from(packet);
+        let header = PacketHeader::from_bytes(&mut reader).unwrap();
+        assert!(!header.get_packet_type().is_compressed());
+        let mut channels = Vec::new();
+        if header.get_packet_type() == PacketType::DataFragment {
+            channels.push(ChannelId::from_bytes(&mut reader).unwrap());
+            FragmentData::from_bytes(&mut reader).unwrap();
+        }
+        while reader.has_remaining() {
+            let channel = ChannelId::from_bytes(&mut reader).unwrap();
+            let count = reader.read_u8().unwrap();
+            for _ in 0..count {
+                SingleData::from_bytes(&mut reader).unwrap();
+                channels.push(channel);
+            }
+        }
+        (header.packet_id, channels)
+    }
+
+    #[test]
+    fn admission_events_preserve_bytes_and_report_each_packets_channels() {
+        let settings = ChannelSettings::default();
+        let mut registry = ChannelRegistry::default();
+        let (_, first_id) = registry.add_channel::<RetryChannel>(settings);
+        let (_, second_id) = registry.add_channel::<DiscardChannel>(settings);
+        let mut app = admission_test_app(registry);
+        let world = app.world_mut();
+        // Two identical transports prove observation does not alter bytes or ordering.
+        // A third, differently populated transport exercises per-entity event metadata.
+        let entities = [true, false, true].map(|observe| {
+            let mut transport = Transport::default();
+            transport.add_channel_send::<RetryChannel>(settings, first_id);
+            transport.add_channel_send::<DiscardChannel>(settings, second_id);
+            let mut entity = world.spawn((
+                Link::default().with_mtu(lightyear_link::LinkMtu::new(256)),
+                Linked,
+                transport,
+            ));
+            if observe {
+                entity.insert(ObservePacketAdmissions);
+            }
+            entity.id()
+        });
+        for &entity in &entities[..2] {
+            let transport = world.get::<Transport>(entity).unwrap();
+            transport
+                .send::<RetryChannel>(Bytes::from(vec![1; 700]))
+                .unwrap();
+            transport
+                .send::<RetryChannel>(Bytes::from_static(b"first"))
+                .unwrap();
+            transport
+                .send::<RetryChannel>(Bytes::from_static(b"second"))
+                .unwrap();
+            transport
+                .send::<DiscardChannel>(Bytes::from_static(b"other channel"))
+                .unwrap();
+        }
+        world
+            .get::<Transport>(entities[2])
+            .unwrap()
+            .send::<DiscardChannel>(Bytes::from_static(b"separate entity"))
+            .unwrap();
+
+        world.run_system_once(TransportPlugin::buffer_send).unwrap();
+        let packets = entities.map(|entity| {
+            world
+                .get_mut::<Link>(entity)
+                .unwrap()
+                .send
+                .drain()
+                .collect::<Vec<_>>()
+        });
+        assert_eq!(packets[0], packets[1]);
+        assert!(
+            packets[0].len() > 1,
+            "large message must span several packets"
+        );
+        let events = &world.resource::<Admissions>().0;
+        assert_eq!(events.len(), packets[0].len() + packets[2].len());
+        assert!(events.iter().all(|event| event.entity != entities[1]));
+        let mut mixed_packet = false;
+        let mut repeated_channel = false;
+        for index in [0, 2] {
+            let observed: Vec<_> = events
+                .iter()
+                .filter(|event| event.entity == entities[index])
+                .collect();
+            assert_eq!(observed.len(), packets[index].len());
+            for (event, packet) in observed.into_iter().zip(&packets[index]) {
+                let (packet_id, channels) = packet_channels(packet.clone());
+                assert_eq!(event.packet_id, packet_id);
+                assert_eq!(event.bytes, packet.len());
+                assert_eq!(event.channels, channels);
+                mixed_packet |= channels.contains(&first_id) && channels.contains(&second_id);
+                repeated_channel |= channels.iter().filter(|&&id| id == first_id).count() > 1;
+            }
+        }
+        assert!(
+            mixed_packet,
+            "final fragment packet also contains another channel"
+        );
+        assert!(repeated_channel, "metadata retains repeated channel IDs");
+
+        let previous_count = events.len();
+        world
+            .entity_mut(entities[0])
+            .remove::<ObservePacketAdmissions>();
+        world
+            .get::<Transport>(entities[0])
+            .unwrap()
+            .send::<RetryChannel>(Bytes::from_static(b"after opt-out"))
+            .unwrap();
+        world.run_system_once(TransportPlugin::buffer_send).unwrap();
+        assert_eq!(world.get::<Link>(entities[0]).unwrap().send.len(), 1);
+        assert_eq!(world.resource::<Admissions>().0.len(), previous_count);
+    }
+
+    #[test]
+    fn bandwidth_denied_packets_do_not_emit_admission_events() {
+        let settings = ChannelSettings {
+            retry_unsent_messages: true,
+            ..Default::default()
+        };
+        let mut registry = ChannelRegistry::default();
+        let (kind, id) = registry.add_channel::<RetryChannel>(settings);
+        let mut app = admission_test_app(registry);
+        let world = app.world_mut();
+        let entity = spawn_transport::<RetryChannel>(world, settings, kind, id);
+        world.entity_mut(entity).insert(ObservePacketAdmissions);
+        world.run_system_once(TransportPlugin::buffer_send).unwrap();
+
+        let packet = world.get_mut::<Link>(entity).unwrap().send.pop().unwrap();
+        assert_eq!(world.get::<Link>(entity).unwrap().send.len(), 0);
+        assert_eq!(pending_candidates::<RetryChannel>(world, entity), 1);
+        let events = &world.resource::<Admissions>().0;
+        assert_eq!(events.len(), 1, "only the admitted packet is observed");
+        assert_eq!(events[0].entity, entity);
+        assert_eq!(events[0].packet_id, PacketId(0));
+        assert_eq!(events[0].bytes, packet.len());
+        assert_eq!(events[0].channels, [id]);
+    }
+
+    #[test]
+    fn ack_only_admission_has_empty_channels_and_is_emitted_once() {
+        let mut app = admission_test_app(ChannelRegistry::default());
+        let world = app.world_mut();
+        let entity = world
+            .spawn((
+                Link::default(),
+                Linked,
+                Transport::default(),
+                ObservePacketAdmissions,
+            ))
+            .id();
+        let header =
+            PacketHeaderManager::default().preview_send_packet_header(PacketType::Data, Tick(7));
+        let mut packet = Vec::new();
+        header.to_bytes(&mut packet).unwrap();
+        world
+            .get_mut::<Link>(entity)
+            .unwrap()
+            .recv
+            .push_raw(lightyear_link::recv_payload_from_bytes(Bytes::from(packet)));
+        world
+            .run_system_once(TransportPlugin::buffer_receive)
+            .unwrap();
+        world.run_system_once(TransportPlugin::buffer_send).unwrap();
+
+        let packet = world.get_mut::<Link>(entity).unwrap().send.pop().unwrap();
+        let header = PacketHeader::from_bytes(&mut Reader::from(packet.clone())).unwrap();
+        assert_eq!(header.get_packet_type(), PacketType::AckOnly);
+        let events = &world.resource::<Admissions>().0;
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].entity, entity);
+        assert_eq!(events[0].packet_id, header.packet_id);
+        assert_eq!(events[0].bytes, packet.len());
+        assert!(events[0].channels.is_empty());
+
+        world.run_system_once(TransportPlugin::buffer_send).unwrap();
+        assert_eq!(world.resource::<Admissions>().0.len(), 1);
+        assert_eq!(world.get::<Link>(entity).unwrap().send.len(), 0);
+    }
+
+    #[test]
+    fn host_client_messages_do_not_emit_packet_admission_events() {
+        let settings = ChannelSettings::default();
+        let mut registry = ChannelRegistry::default();
+        let (_, id) = registry.add_channel::<RetryChannel>(settings);
+        let mut transport = Transport::default();
+        transport.add_channel_send::<RetryChannel>(settings, id);
+        let mut app = admission_test_app(registry);
+        let world = app.world_mut();
+        let entity = world
+            .spawn((
+                Link::default(),
+                Linked,
+                transport,
+                ObservePacketAdmissions,
+                HostClient { buffer: Vec::new() },
+            ))
+            .id();
+        world
+            .get::<Transport>(entity)
+            .unwrap()
+            .send::<RetryChannel>(Bytes::from_static(b"local"))
+            .unwrap();
+        world.run_system_once(TransportPlugin::buffer_send).unwrap();
+        assert_eq!(world.get::<HostClient>(entity).unwrap().buffer.len(), 1);
+        assert_eq!(world.get::<Link>(entity).unwrap().send.len(), 0);
+        assert!(world.resource::<Admissions>().0.is_empty());
+    }
+
+    #[cfg(feature = "compression_lz4")]
+    #[test]
+    fn admission_byte_count_uses_compressed_packet_length() {
+        let settings = ChannelSettings::default();
+        let mut registry = ChannelRegistry::default();
+        let (_, id) = registry.add_channel::<RetryChannel>(settings);
+        let mut transport = Transport::default()
+            .with_compression(crate::packet::compression::CompressionConfig::LZ4);
+        transport.add_channel_send::<RetryChannel>(settings, id);
+        let mut app = admission_test_app(registry);
+        let world = app.world_mut();
+        let entity = world
+            .spawn((Link::default(), Linked, transport, ObservePacketAdmissions))
+            .id();
+        world
+            .get::<Transport>(entity)
+            .unwrap()
+            .send::<RetryChannel>(Bytes::from(vec![7; 800]))
+            .unwrap();
+        world.run_system_once(TransportPlugin::buffer_send).unwrap();
+        let packet = world.get_mut::<Link>(entity).unwrap().send.pop().unwrap();
+        let header = PacketHeader::from_bytes(&mut Reader::from(packet.clone())).unwrap();
+        assert!(header.get_packet_type().is_compressed());
+        let events = &world.resource::<Admissions>().0;
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].bytes, packet.len());
+        assert!(events[0].bytes < 800);
+        assert_eq!(events[0].channels, [id]);
+    }
 
     fn spawn_transport<C: crate::channel::Channel>(
         world: &mut World,
