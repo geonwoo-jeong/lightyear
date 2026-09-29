@@ -25,7 +25,7 @@ use bevy_ecs::relationship::RelationshipTarget;
 use bevy_ecs::system::ParallelCommands;
 use tracing::{debug, error, info};
 
-use crate::{UdpError, UdpSendObserver, send_observer::observe_send_result};
+use crate::{ObserveUdpSends, UdpError, UdpSendOutcome};
 use aeronet_io::connection::{LocalAddr, PeerAddr};
 use bevy_platform::collections::{HashMap, hash_map::Entry};
 use bytes::BufMut;
@@ -141,14 +141,16 @@ impl UdpEndpointPlugin {
     }
 
     fn send(
-        mut endpoint_query: Query<(Entity, &mut UdpEndpoint, &Endpoint), With<Linked>>,
+        mut commands: Commands,
+        mut endpoint_query: Query<
+            (Entity, &mut UdpEndpoint, &Endpoint, Has<ObserveUdpSends>),
+            With<Linked>,
+        >,
         mut link_query: Query<(&mut Link, &PeerAddr), With<UdpLinkOfIO>>,
-        observer: Option<Res<UdpSendObserver>>,
     ) {
         // TODO: parallelize
-        endpoint_query
-            .iter_mut()
-            .for_each(|(endpoint_entity, mut udp_endpoint, endpoint)| {
+        endpoint_query.iter_mut().for_each(
+            |(endpoint_entity, mut udp_endpoint, endpoint, observe)| {
                 endpoint.collection().iter().for_each(|peer_entity| {
                     let Some((mut link, remote_addr)) = link_query.get_mut(*peer_entity).ok()
                     else {
@@ -166,17 +168,19 @@ impl UdpEndpointPlugin {
                             .inspect_err(|e| {
                                 error!("Error sending UDP packet to {}: {}", remote_addr.0, e);
                             });
-                        observe_send_result(
-                            observer.as_deref(),
-                            endpoint_entity,
-                            *peer_entity,
-                            remote_addr.0,
-                            send_payload.len(),
-                            &result,
-                        );
+                        if observe {
+                            commands.trigger(UdpSendOutcome::from_result(
+                                endpoint_entity,
+                                *peer_entity,
+                                remote_addr.0,
+                                send_payload.len(),
+                                &result,
+                            ));
+                        }
                     });
                 });
-            });
+            },
+        );
     }
 
     fn receive(
@@ -331,8 +335,6 @@ impl Plugin for UdpEndpointPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::UdpSendOutcome;
-    use alloc::sync::Arc;
     use bytes::Bytes;
     use core::net::Ipv4Addr;
     use core::time::Duration;
@@ -340,23 +342,24 @@ mod tests {
     use lightyear_link::{RecvLinkConditioner, UnlinkReason};
     use std::io::ErrorKind;
     use std::net::UdpSocket;
-    use std::sync::Mutex;
 
     #[derive(Resource, Default)]
     struct UnlinkedChildren(Vec<Entity>);
 
+    #[derive(Resource, Default)]
+    struct SendOutcomes(Vec<UdpSendOutcome>);
+
     #[test]
     fn send_reports_endpoint_and_peer_context_with_or_without_observer() {
         for observe in [false, true] {
-            let outcomes = Arc::new(Mutex::new(Vec::<UdpSendOutcome>::new()));
             let mut app = App::new();
             app.add_plugins(UdpEndpointPlugin);
-            if observe {
-                let captured = Arc::clone(&outcomes);
-                app.insert_resource(UdpSendObserver::new(move |outcome| {
-                    captured.lock().unwrap().push(outcome);
-                }));
-            }
+            app.init_resource::<SendOutcomes>();
+            app.add_observer(
+                |event: On<UdpSendOutcome>, mut outcomes: ResMut<SendOutcomes>| {
+                    outcomes.0.push(*event);
+                },
+            );
             let endpoint = app
                 .world_mut()
                 .spawn((
@@ -364,6 +367,9 @@ mod tests {
                     LocalAddr("127.0.0.1:0".parse().unwrap()),
                 ))
                 .id();
+            if observe {
+                app.world_mut().entity_mut(endpoint).insert(ObserveUdpSends);
+            }
             app.world_mut().trigger(LinkStart { entity: endpoint });
             app.world_mut().flush();
 
@@ -394,14 +400,14 @@ mod tests {
             app.world_mut().run_schedule(PostUpdate);
             app.world_mut().run_schedule(PostUpdate);
 
-            let outcomes = outcomes.lock().unwrap();
+            let outcomes = &app.world().resource::<SendOutcomes>().0;
             assert_eq!(outcomes.len(), if observe { 6 } else { 0 });
             for (entity, remote_addr, receiver) in peers {
                 assert_eq!(app.world().get::<Link>(entity).unwrap().send.len(), 0);
                 if observe {
                     let peer_outcomes: Vec<_> = outcomes
                         .iter()
-                        .filter(|outcome| outcome.link_entity == entity)
+                        .filter(|outcome| outcome.entity == entity)
                         .collect();
                     assert_eq!(peer_outcomes.len(), 3);
                     for outcome in &peer_outcomes {

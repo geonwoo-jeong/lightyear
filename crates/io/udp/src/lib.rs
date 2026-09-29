@@ -14,8 +14,6 @@
 // requires `std` for `UdpSocket`.
 #![allow(clippy::std_instead_of_core)]
 
-extern crate alloc;
-
 use std::io::ErrorKind;
 use std::net::UdpSocket;
 
@@ -32,7 +30,7 @@ use lightyear_utils::adaptive_for_each_mut;
 use tracing::{error, info, trace};
 
 mod send_observer;
-pub use send_observer::{UdpSendError, UdpSendObserver, UdpSendOutcome};
+pub use send_observer::{ObserveUdpSends, UdpSendError, UdpSendOutcome};
 
 /// Peer-discovery glue for [`lightyear_p2p::Lobby`].
 ///
@@ -57,7 +55,7 @@ pub mod server;
 
 /// Re-exports commonly needed by applications and transport setup code.
 pub mod prelude {
-    pub use crate::{UdpIo, UdpSendError, UdpSendObserver, UdpSendOutcome};
+    pub use crate::{ObserveUdpSends, UdpIo, UdpSendError, UdpSendOutcome};
 
     /// UDP endpoint prelude: the transport's socket and per-peer link fan-out.
     ///
@@ -172,31 +170,43 @@ impl UdpPlugin {
     }
 
     fn send(
-        mut query: Query<(Entity, &mut Link, &mut UdpIo, &PeerAddr), With<Linked>>,
-        observer: Option<Res<UdpSendObserver>>,
+        commands: ParallelCommands,
+        mut query: Query<
+            (
+                Entity,
+                &mut Link,
+                &mut UdpIo,
+                &PeerAddr,
+                Has<ObserveUdpSends>,
+            ),
+            With<Linked>,
+        >,
     ) {
-        let observer = observer.as_deref();
-        adaptive_for_each_mut!(query).for_each(|(entity, mut link, mut udp_io, remote_addr)| {
-            link.send.drain().for_each(|payload| {
-                // B/s
-                #[cfg(feature = "metrics")]
-                metrics::gauge!("udp/send").increment(payload.len() as f64);
-                let result = udp_io
-                    .socket
-                    .as_mut()
-                    .unwrap()
-                    .send_to(payload.as_ref(), remote_addr.0)
-                    .inspect_err(|e| error!("Error sending UDP packet: {}", e));
-                send_observer::observe_send_result(
-                    observer,
-                    entity,
-                    entity,
-                    remote_addr.0,
-                    payload.len(),
-                    &result,
-                );
-            });
-        })
+        adaptive_for_each_mut!(query).for_each(
+            |(entity, mut link, mut udp_io, remote_addr, observe)| {
+                link.send.drain().for_each(|payload| {
+                    // B/s
+                    #[cfg(feature = "metrics")]
+                    metrics::gauge!("udp/send").increment(payload.len() as f64);
+                    let result = udp_io
+                        .socket
+                        .as_mut()
+                        .unwrap()
+                        .send_to(payload.as_ref(), remote_addr.0)
+                        .inspect_err(|e| error!("Error sending UDP packet: {}", e));
+                    if observe {
+                        let outcome = UdpSendOutcome::from_result(
+                            entity,
+                            entity,
+                            remote_addr.0,
+                            payload.len(),
+                            &result,
+                        );
+                        commands.command_scope(|mut commands| commands.trigger(outcome));
+                    }
+                });
+            },
+        )
     }
 
     fn receive(mut query: Query<(&mut Link, &mut UdpIo), With<Linked>>) {
@@ -270,10 +280,62 @@ impl Plugin for UdpPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::sync::Arc;
     use bytes::Bytes;
     use core::time::Duration;
-    use std::sync::Mutex;
+
+    #[derive(Resource, Default)]
+    struct SendOutcomes(Vec<UdpSendOutcome>);
+
+    #[test]
+    fn send_outcomes_are_deferred_and_target_the_sending_link() {
+        let receiver = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let mut app = App::new();
+        app.add_plugins(UdpPlugin).init_resource::<SendOutcomes>();
+        let entity = app
+            .world_mut()
+            .spawn((
+                UdpIo::default(),
+                ObserveUdpSends,
+                LocalAddr("127.0.0.1:0".parse().unwrap()),
+                PeerAddr(receiver.local_addr().unwrap()),
+            ))
+            .observe(
+                |event: On<UdpSendOutcome>, mut outcomes: ResMut<SendOutcomes>| {
+                    outcomes.0.push(*event);
+                },
+            )
+            .id();
+        app.world_mut().trigger(LinkStart { entity });
+        app.world_mut().flush();
+        app.world_mut()
+            .get_mut::<Link>(entity)
+            .unwrap()
+            .send
+            .push(Bytes::from_static(b"data"));
+
+        let mut system = IntoSystem::into_system(UdpPlugin::send);
+        system.initialize(app.world_mut());
+        system
+            .run_without_applying_deferred((), app.world_mut())
+            .unwrap();
+        assert_eq!(app.world().get::<Link>(entity).unwrap().send.len(), 0);
+        assert!(app.world().resource::<SendOutcomes>().0.is_empty());
+        system.apply_deferred(app.world_mut());
+        assert_eq!(app.world().resource::<SendOutcomes>().0.len(), 1);
+        assert_eq!(app.world().resource::<SendOutcomes>().0[0].entity, entity);
+
+        app.world_mut()
+            .entity_mut(entity)
+            .remove::<ObserveUdpSends>();
+        app.world_mut()
+            .get_mut::<Link>(entity)
+            .unwrap()
+            .send
+            .push(Bytes::from_static(b"data"));
+        system.run((), app.world_mut()).unwrap();
+        assert_eq!(app.world().get::<Link>(entity).unwrap().send.len(), 0);
+        assert_eq!(app.world().resource::<SendOutcomes>().0.len(), 1);
+    }
 
     #[test]
     fn send_reports_outcomes_and_drains_with_or_without_observer() {
@@ -283,15 +345,14 @@ mod tests {
                 .set_read_timeout(Some(Duration::from_secs(1)))
                 .unwrap();
             let remote_addr = receiver.local_addr().unwrap();
-            let outcomes = Arc::new(Mutex::new(Vec::<UdpSendOutcome>::new()));
             let mut app = App::new();
             app.add_plugins(UdpPlugin);
-            if observe {
-                let captured = Arc::clone(&outcomes);
-                app.insert_resource(UdpSendObserver::new(move |outcome| {
-                    captured.lock().unwrap().push(outcome);
-                }));
-            }
+            app.init_resource::<SendOutcomes>();
+            app.add_observer(
+                |event: On<UdpSendOutcome>, mut outcomes: ResMut<SendOutcomes>| {
+                    outcomes.0.push(*event);
+                },
+            );
             let entity = app
                 .world_mut()
                 .spawn((
@@ -300,6 +361,9 @@ mod tests {
                     PeerAddr(remote_addr),
                 ))
                 .id();
+            if observe {
+                app.world_mut().entity_mut(entity).insert(ObserveUdpSends);
+            }
             app.world_mut().trigger(LinkStart { entity });
             app.world_mut().flush();
             {
@@ -315,12 +379,12 @@ mod tests {
             // A later send pass must not retry or report any of these packets again.
             app.world_mut().run_schedule(PostUpdate);
 
-            let outcomes = outcomes.lock().unwrap();
+            let outcomes = &app.world().resource::<SendOutcomes>().0;
             if observe {
                 assert_eq!(outcomes.len(), 3);
                 for outcome in outcomes.iter() {
                     assert_eq!(outcome.socket_entity, entity);
-                    assert_eq!(outcome.link_entity, entity);
+                    assert_eq!(outcome.entity, entity);
                     assert_eq!(outcome.remote_addr, remote_addr);
                 }
                 assert_eq!(outcomes[0].attempted_bytes, 5);
