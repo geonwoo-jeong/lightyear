@@ -14,6 +14,8 @@
 // requires `std` for `UdpSocket`.
 #![allow(clippy::std_instead_of_core)]
 
+extern crate alloc;
+
 use std::io::ErrorKind;
 use std::net::UdpSocket;
 
@@ -28,6 +30,9 @@ use lightyear_link::{
 };
 use lightyear_utils::adaptive_for_each_mut;
 use tracing::{error, info, trace};
+
+mod send_observer;
+pub use send_observer::{UdpSendError, UdpSendObserver, UdpSendOutcome};
 
 /// Peer-discovery glue for [`lightyear_p2p::Lobby`].
 ///
@@ -52,7 +57,7 @@ pub mod server;
 
 /// Re-exports commonly needed by applications and transport setup code.
 pub mod prelude {
-    pub use crate::UdpIo;
+    pub use crate::{UdpIo, UdpSendError, UdpSendObserver, UdpSendOutcome};
 
     /// UDP endpoint prelude: the transport's socket and per-peer link fan-out.
     ///
@@ -166,19 +171,30 @@ impl UdpPlugin {
         }
     }
 
-    fn send(mut query: Query<(&mut Link, &mut UdpIo, &PeerAddr), With<Linked>>) {
-        adaptive_for_each_mut!(query).for_each(|(mut link, mut udp_io, remote_addr)| {
+    fn send(
+        mut query: Query<(Entity, &mut Link, &mut UdpIo, &PeerAddr), With<Linked>>,
+        observer: Option<Res<UdpSendObserver>>,
+    ) {
+        let observer = observer.as_deref();
+        adaptive_for_each_mut!(query).for_each(|(entity, mut link, mut udp_io, remote_addr)| {
             link.send.drain().for_each(|payload| {
                 // B/s
                 #[cfg(feature = "metrics")]
                 metrics::gauge!("udp/send").increment(payload.len() as f64);
-                udp_io
+                let result = udp_io
                     .socket
                     .as_mut()
                     .unwrap()
                     .send_to(payload.as_ref(), remote_addr.0)
-                    .inspect_err(|e| error!("Error sending UDP packet: {}", e))
-                    .ok();
+                    .inspect_err(|e| error!("Error sending UDP packet: {}", e));
+                send_observer::observe_send_result(
+                    observer,
+                    entity,
+                    entity,
+                    remote_addr.0,
+                    payload.len(),
+                    &result,
+                );
             });
         })
     }
@@ -254,6 +270,81 @@ impl Plugin for UdpPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::sync::Arc;
+    use bytes::Bytes;
+    use core::time::Duration;
+    use std::sync::Mutex;
+
+    #[test]
+    fn send_reports_outcomes_and_drains_with_or_without_observer() {
+        for observe in [false, true] {
+            let receiver = UdpSocket::bind("127.0.0.1:0").unwrap();
+            receiver
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
+            let remote_addr = receiver.local_addr().unwrap();
+            let outcomes = Arc::new(Mutex::new(Vec::<UdpSendOutcome>::new()));
+            let mut app = App::new();
+            app.add_plugins(UdpPlugin);
+            if observe {
+                let captured = Arc::clone(&outcomes);
+                app.insert_resource(UdpSendObserver::new(move |outcome| {
+                    captured.lock().unwrap().push(outcome);
+                }));
+            }
+            let entity = app
+                .world_mut()
+                .spawn((
+                    UdpIo::default(),
+                    LocalAddr("127.0.0.1:0".parse().unwrap()),
+                    PeerAddr(remote_addr),
+                ))
+                .id();
+            app.world_mut().trigger(LinkStart { entity });
+            app.world_mut().flush();
+            {
+                let mut link = app.world_mut().get_mut::<Link>(entity).unwrap();
+                link.send.push(Bytes::from_static(b"first"));
+                // Larger than the maximum IPv4 UDP payload: the syscall must fail.
+                link.send.push(Bytes::from(vec![0; 65_536]));
+                link.send.push(Bytes::from_static(b"last"));
+            }
+
+            app.world_mut().run_schedule(PostUpdate);
+            assert_eq!(app.world().get::<Link>(entity).unwrap().send.len(), 0);
+            // A later send pass must not retry or report any of these packets again.
+            app.world_mut().run_schedule(PostUpdate);
+
+            let outcomes = outcomes.lock().unwrap();
+            if observe {
+                assert_eq!(outcomes.len(), 3);
+                for outcome in outcomes.iter() {
+                    assert_eq!(outcome.socket_entity, entity);
+                    assert_eq!(outcome.link_entity, entity);
+                    assert_eq!(outcome.remote_addr, remote_addr);
+                }
+                assert_eq!(outcomes[0].attempted_bytes, 5);
+                assert_eq!(outcomes[0].result, Ok(5));
+                assert_eq!(outcomes[1].attempted_bytes, 65_536);
+                assert!(outcomes[1].result.unwrap_err().raw_os_error.is_some());
+                assert_eq!(outcomes[2].attempted_bytes, 4);
+                assert_eq!(outcomes[2].result, Ok(4));
+            } else {
+                assert!(outcomes.is_empty());
+            }
+
+            let mut buffer = [0; 16];
+            for expected in [&b"first"[..], &b"last"[..]] {
+                let (len, _) = receiver.recv_from(&mut buffer).unwrap();
+                assert_eq!(&buffer[..len], expected);
+            }
+            receiver.set_nonblocking(true).unwrap();
+            assert_eq!(
+                receiver.recv_from(&mut buffer).unwrap_err().kind(),
+                ErrorKind::WouldBlock
+            );
+        }
+    }
 
     #[test]
     fn receive_buffer_pool_reclaims_a_published_datagram_after_drop() {
