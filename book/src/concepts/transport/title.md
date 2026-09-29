@@ -38,3 +38,6 @@ For an authoritative server, add `Server` alongside the endpoint component and t
 connection component. `ServerUdpIo` is the UDP shorthand that requires both `UdpEndpoint` and
 `Server`. Configure inherited receive conditioning with `Endpoint::new(conditioner)` rather
 than on `Server`; access the fan-out collection through `Endpoint`.
+
+See [observing outgoing traffic](observation.md) to distinguish transport packet admission,
+local UDP send results, and packet acknowledgements.
