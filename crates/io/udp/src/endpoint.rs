@@ -25,9 +25,9 @@ use bevy_ecs::relationship::RelationshipTarget;
 use bevy_ecs::system::ParallelCommands;
 use tracing::{debug, error, info};
 
-use crate::UdpError;
 #[cfg(feature = "send_observation")]
 use crate::{ObserveUdpSends, UdpSendOutcome};
+use crate::{UdpError, UdpReceiveLimit, receive_limit::ReceiveBudget};
 use aeronet_io::connection::{LocalAddr, PeerAddr};
 use bevy_platform::collections::{HashMap, hash_map::Entry};
 use bytes::BufMut;
@@ -195,7 +195,10 @@ impl UdpEndpointPlugin {
 
     fn receive(
         commands: ParallelCommands,
-        mut endpoint_query: Query<(Entity, &mut UdpEndpoint), With<Linked>>,
+        mut endpoint_query: Query<
+            (Entity, &mut UdpEndpoint, Option<&UdpReceiveLimit>),
+            With<Linked>,
+        >,
         // TODO: we want to have With<Linked> here, but that would mean that if a client sends 2 packets in a row
         //  for the first one we spawn them, and for the second one the query will return False.
         //  maybe have a separate Vec for new addresses, and for these we don't require Linked?
@@ -204,7 +207,7 @@ impl UdpEndpointPlugin {
         endpoint_query
             // TODO: would par_iter_mut be better here?
             .iter_mut()
-            .for_each(|(endpoint_entity, mut udp_endpoint)| {
+            .for_each(|(endpoint_entity, mut udp_endpoint, limit)| {
                 // SAFETY: we know that each UdpEndpoint will target different Link entities, so there won't be any aliasing
                 let mut link_query = unsafe { link_query.reborrow_unsafe() };
 
@@ -212,7 +215,8 @@ impl UdpEndpointPlugin {
                 let udp_endpoint = &mut *udp_endpoint;
                 udp_endpoint.recv_buffers.reclaim_pending();
 
-                loop {
+                let mut budget = ReceiveBudget::new(limit);
+                while budget.take_attempt() {
                     let mut buffer = udp_endpoint.recv_buffers.take();
                     // Check how much actual uninitialized space we have at the end
                     let capacity = buffer.capacity();
@@ -345,20 +349,124 @@ impl Plugin for UdpEndpointPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bevy_app::TaskPoolPlugin;
     #[cfg(feature = "send_observation")]
     use bytes::Bytes;
     use core::net::Ipv4Addr;
+    use core::num::NonZeroUsize;
     #[cfg(feature = "send_observation")]
     use core::time::Duration;
     use lightyear_link::prelude::LinkConditionerConfig;
     use lightyear_link::{RecvLinkConditioner, UnlinkReason};
     #[cfg(feature = "send_observation")]
     use std::io::ErrorKind;
-    #[cfg(feature = "send_observation")]
     use std::net::UdpSocket;
 
     #[derive(Resource, Default)]
     struct UnlinkedChildren(Vec<Entity>);
+
+    #[derive(Resource, Default)]
+    struct ReceivePasses(usize);
+
+    fn received_bytes(app: &mut App, endpoint: Entity, peer: SocketAddr) -> Vec<u8> {
+        let endpoint = app.world().get::<UdpEndpoint>(endpoint).unwrap();
+        let Some(status) = endpoint.connected_addresses.get(&peer) else {
+            return Vec::new();
+        };
+        let LinkOfStatus::Spawned(entity) = *status else {
+            panic!("receive must finalize newly spawned links even when its limit is reached");
+        };
+        app.world_mut()
+            .get_mut::<Link>(entity)
+            .unwrap()
+            .recv
+            .drain()
+            .map(|payload| {
+                assert_eq!(payload.len(), 1);
+                payload[0]
+            })
+            .collect()
+    }
+
+    #[test]
+    fn receive_limits_count_discarded_packets_and_allow_other_endpoints_to_progress() {
+        let mut app = App::new();
+        app.add_plugins((TaskPoolPlugin::default(), UdpEndpointPlugin));
+        app.init_resource::<ReceivePasses>();
+        app.add_systems(
+            PreUpdate,
+            (|mut passes: ResMut<ReceivePasses>| passes.0 += 1).after(LinkSystems::Receive),
+        );
+        let peers: Vec<_> = [Some(1), Some(2), None]
+            .into_iter()
+            .enumerate()
+            .map(|(index, limit)| {
+                let endpoint = app
+                    .world_mut()
+                    .spawn((
+                        UdpEndpoint::default(),
+                        LocalAddr("127.0.0.1:0".parse().unwrap()),
+                    ))
+                    .id();
+                if let Some(limit) = limit {
+                    app.world_mut()
+                        .entity_mut(endpoint)
+                        .insert(UdpReceiveLimit(NonZeroUsize::new(limit).unwrap()));
+                }
+                app.world_mut().trigger(LinkStart { entity: endpoint });
+                app.world_mut().flush();
+                let address = app.world().get::<LocalAddr>(endpoint).unwrap().0;
+                let sender = UdpSocket::bind("127.0.0.1:0").unwrap();
+                let peer = sender.local_addr().unwrap();
+                match index {
+                    0 => {
+                        // An unknown entity causes the first datagram to be discarded.
+                        let stale = app.world_mut().spawn_empty().id();
+                        app.world_mut().despawn(stale);
+                        app.world_mut()
+                            .get_mut::<UdpEndpoint>(endpoint)
+                            .unwrap()
+                            .register_link(peer, stale);
+                    }
+                    1 => {
+                        // The first datagram spawns a link; the second is discarded while the
+                        // link is still spawning. Both must count towards this socket's limit.
+                    }
+                    _ => {
+                        let child = app
+                            .world_mut()
+                            .spawn((
+                                LinkOf { endpoint },
+                                Link::default(),
+                                UdpLinkOfIO,
+                                Linked,
+                                // Only a limit on the endpoint applies to its socket.
+                                UdpReceiveLimit(NonZeroUsize::new(1).unwrap()),
+                            ))
+                            .id();
+                        app.world_mut()
+                            .get_mut::<UdpEndpoint>(endpoint)
+                            .unwrap()
+                            .register_link(peer, child);
+                    }
+                }
+                for byte in 0..3 {
+                    sender.send_to(&[byte], address).unwrap();
+                }
+                (endpoint, peer, sender)
+            })
+            .collect();
+
+        let expected: [[&[u8]; 3]; 3] =
+            [[&[], &[0], &[0, 1, 2]], [&[1], &[2], &[]], [&[2], &[], &[]]];
+        for (turn, expected) in expected.into_iter().enumerate() {
+            app.update();
+            assert_eq!(app.world().resource::<ReceivePasses>().0, turn + 1);
+            for (index, (endpoint, peer, _)) in peers.iter().enumerate() {
+                assert_eq!(received_bytes(&mut app, *endpoint, *peer), expected[index]);
+            }
+        }
+    }
 
     #[test]
     fn send_only_has_deferred_work_when_observation_is_compiled_in() {
