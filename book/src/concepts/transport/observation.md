@@ -25,6 +25,26 @@ not full wire bandwidth. Netcode adds encryption overhead and connection traffic
 counts and UDP attempt counts have no guaranteed one-to-one correspondence. A UDP outcome also has
 no transport packet ID. Transport packet IDs wrap and are local to a link.
 
+`PacketAdmitted` and `UdpSendOutcome` require default-off Cargo features. Enable them on the
+direct dependencies used by the example:
+
+```toml
+[dependencies]
+lightyear_udp = { version = "0.30", features = ["send_observation"] }
+lightyear_transport = { version = "0.30", features = ["packet_admission_observation"] }
+```
+
+With the `lightyear` facade, enable `udp` together with `udp_send_observation` for UDP outcomes,
+and `packet_admission_observation` for transport admission events. Another dependency can enable
+these features through Cargo feature unification; leaving a feature out of one dependency
+declaration does not ensure it is disabled in the final build.
+
+When a feature is disabled, its observation APIs, extra query fields, system parameters, and
+deferred commands are compiled out, preserving the default send-system scheduling. Enabling a
+feature retains its observation parameters and deferred-command scheduling barriers even when
+no sockets or links are marked. The markers control per-packet observation work; removing them
+does not restore the feature-disabled scheduling path.
+
 The following helper installs observers on an existing link and keeps fixed-size, saturating
 counters. Call it once per selected link, alongside your normal connection setup. The resource
 aggregates those links without retaining packet payloads or a growing packet history.
@@ -104,9 +124,11 @@ admission or socket-call completion time. Do not infer ordering across different
 an opt-in marker stops new events of that type from being queued, but does not cancel queued events.
 The ACK/loss observers remain active independently of these markers.
 
-Enabling admission observation allocates a channel list for each data packet and queues one event;
-ACK-only events have an empty list. Enabling UDP observation queues one command per send attempt,
-including all peers of a marked endpoint even if only some have targeted observers. Neither event
-copies payload bytes. Keep observers small and read or reset the aggregate resource from an
-application system. Snapshot intervals describe when notifications were processed; ACKs can arrive
+Marked transports allocate a channel list for each admitted data packet and queue one event;
+ACK-only events have an empty list. Marked UDP sockets queue one command per send attempt,
+including all peers of a marked endpoint even if only some have targeted observers. Unmarked
+sockets and links queue no observation events and allocate no admission channel lists, but the
+enabled feature's system and scheduling costs remain. Neither event copies payload bytes. Keep
+observers small and read or reset the aggregate resource from an application system. Snapshot
+intervals describe when notifications were processed; ACKs can arrive
 in a later interval, so subtracting these counters does not directly measure packet loss or latency.
