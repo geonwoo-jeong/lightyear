@@ -15,6 +15,7 @@
   - [Transport](./concepts/transport/title.md)
     - [Serialization](./concepts/transport/serialization.md)
     - [Packet](./concepts/transport/packet.md)
+    - [Observing outgoing traffic](./concepts/transport/observation.md)
   - [Connection](./concepts/connection/title.md)
     - [Multi Connection](./concepts/connection/multi_connection.md)
   - [Reliability](./concepts/reliability/title.md)
