@@ -29,6 +29,10 @@ use lightyear_link::{
 use lightyear_utils::adaptive_for_each_mut;
 use tracing::{error, info, trace};
 
+mod receive_limit;
+use receive_limit::ReceiveBudget;
+pub use receive_limit::UdpReceiveLimit;
+
 /// Peer-discovery glue for [`lightyear_p2p::Lobby`].
 ///
 /// This module is available with the `lobby` feature. It turns a
@@ -52,7 +56,7 @@ pub mod server;
 
 /// Re-exports commonly needed by applications and transport setup code.
 pub mod prelude {
-    pub use crate::UdpIo;
+    pub use crate::{UdpIo, UdpReceiveLimit};
 
     /// UDP endpoint prelude: the transport's socket and per-peer link fan-out.
     ///
@@ -183,12 +187,13 @@ impl UdpPlugin {
         })
     }
 
-    fn receive(mut query: Query<(&mut Link, &mut UdpIo), With<Linked>>) {
-        adaptive_for_each_mut!(query).for_each(|(mut link, mut udp_io)| {
+    fn receive(mut query: Query<(&mut Link, &mut UdpIo, Option<&UdpReceiveLimit>), With<Linked>>) {
+        adaptive_for_each_mut!(query).for_each(|(mut link, mut udp_io, limit)| {
             // enable split borrows
             let udp_io = &mut *udp_io;
             udp_io.recv_buffers.reclaim_pending();
-            loop {
+            let mut budget = ReceiveBudget::new(limit);
+            while budget.take_attempt() {
                 let mut buffer = udp_io.recv_buffers.take();
 
                 // Check how much actual uninitialized space we have at the end
@@ -254,6 +259,77 @@ impl Plugin for UdpPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::num::NonZeroUsize;
+
+    #[derive(Resource, Default)]
+    struct ReceivePasses(usize);
+
+    #[test]
+    fn receive_limits_are_per_socket_and_reset_on_the_next_update() {
+        let mut app = App::new();
+        app.add_plugins((TaskPoolPlugin::default(), UdpPlugin));
+        app.init_resource::<ReceivePasses>();
+        app.add_systems(
+            PreUpdate,
+            (|mut passes: ResMut<ReceivePasses>| passes.0 += 1).after(LinkSystems::Receive),
+        );
+        let sender = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let sockets: Vec<_> = [Some(1), Some(2), None]
+            .into_iter()
+            .map(|limit| {
+                let entity = app
+                    .world_mut()
+                    .spawn((UdpIo::default(), LocalAddr("127.0.0.1:0".parse().unwrap())))
+                    .id();
+                if let Some(limit) = limit {
+                    app.world_mut()
+                        .entity_mut(entity)
+                        .insert(UdpReceiveLimit(NonZeroUsize::new(limit).unwrap()));
+                }
+                app.world_mut().trigger(LinkStart { entity });
+                app.world_mut().flush();
+                let address = app
+                    .world()
+                    .get::<UdpIo>(entity)
+                    .unwrap()
+                    .socket
+                    .as_ref()
+                    .unwrap()
+                    .local_addr()
+                    .unwrap();
+                for byte in 0..3 {
+                    sender.send_to(&[byte], address).unwrap();
+                }
+                (entity, address)
+            })
+            .collect();
+
+        let mut received = [0; 3];
+        for (turn, counts) in [[1, 2, 3], [1, 1, 0], [1, 0, 0]].into_iter().enumerate() {
+            app.update();
+            assert_eq!(app.world().resource::<ReceivePasses>().0, turn + 1);
+            for (index, (entity, _)) in sockets.iter().enumerate() {
+                let mut link = app.world_mut().get_mut::<Link>(*entity).unwrap();
+                assert_eq!(link.recv.len(), counts[index]);
+                for payload in link.recv.drain() {
+                    assert_eq!(payload.as_ref(), &[received[index]]);
+                    received[index] += 1;
+                }
+            }
+        }
+        assert_eq!(received, [3, 3, 3]);
+
+        let (entity, address) = sockets[0];
+        app.world_mut()
+            .entity_mut(entity)
+            .remove::<UdpReceiveLimit>();
+        for byte in 3..5 {
+            sender.send_to(&[byte], address).unwrap();
+        }
+        app.update();
+        assert_eq!(app.world().get::<Link>(entity).unwrap().recv.len(), 2);
+        assert_eq!(app.world().resource::<ReceivePasses>().0, 4);
+    }
 
     #[test]
     fn receive_buffer_pool_reclaims_a_published_datagram_after_drop() {
