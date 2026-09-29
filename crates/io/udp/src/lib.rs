@@ -29,6 +29,11 @@ use lightyear_link::{
 use lightyear_utils::adaptive_for_each_mut;
 use tracing::{error, info, trace};
 
+#[cfg(feature = "send_observation")]
+mod send_observer;
+#[cfg(feature = "send_observation")]
+pub use send_observer::{ObserveUdpSends, UdpSendError, UdpSendOutcome};
+
 /// Peer-discovery glue for [`lightyear_p2p::Lobby`].
 ///
 /// This module is available with the `lobby` feature. It turns a
@@ -53,6 +58,8 @@ pub mod server;
 /// Re-exports commonly needed by applications and transport setup code.
 pub mod prelude {
     pub use crate::UdpIo;
+    #[cfg(feature = "send_observation")]
+    pub use crate::{ObserveUdpSends, UdpSendError, UdpSendOutcome};
 
     /// UDP endpoint prelude: the transport's socket and per-peer link fan-out.
     ///
@@ -166,19 +173,51 @@ impl UdpPlugin {
         }
     }
 
-    fn send(mut query: Query<(&mut Link, &mut UdpIo, &PeerAddr), With<Linked>>) {
-        adaptive_for_each_mut!(query).for_each(|(mut link, mut udp_io, remote_addr)| {
+    fn send(
+        #[cfg(feature = "send_observation")] commands: ParallelCommands,
+        #[cfg(not(feature = "send_observation"))] mut query: Query<
+            (&mut Link, &mut UdpIo, &PeerAddr),
+            With<Linked>,
+        >,
+        #[cfg(feature = "send_observation")] mut query: Query<
+            (
+                Entity,
+                &mut Link,
+                &mut UdpIo,
+                &PeerAddr,
+                Has<ObserveUdpSends>,
+            ),
+            With<Linked>,
+        >,
+    ) {
+        adaptive_for_each_mut!(query).for_each(|item| {
+            #[cfg(feature = "send_observation")]
+            let (entity, mut link, mut udp_io, remote_addr, observe) = item;
+            #[cfg(not(feature = "send_observation"))]
+            let (mut link, mut udp_io, remote_addr) = item;
             link.send.drain().for_each(|payload| {
                 // B/s
                 #[cfg(feature = "metrics")]
                 metrics::gauge!("udp/send").increment(payload.len() as f64);
-                udp_io
+                let result = udp_io
                     .socket
                     .as_mut()
                     .unwrap()
                     .send_to(payload.as_ref(), remote_addr.0)
-                    .inspect_err(|e| error!("Error sending UDP packet: {}", e))
-                    .ok();
+                    .inspect_err(|e| error!("Error sending UDP packet: {}", e));
+                #[cfg(not(feature = "send_observation"))]
+                let _ = result;
+                #[cfg(feature = "send_observation")]
+                if observe {
+                    let outcome = UdpSendOutcome::from_result(
+                        entity,
+                        entity,
+                        remote_addr.0,
+                        payload.len(),
+                        &result,
+                    );
+                    commands.command_scope(|mut commands| commands.trigger(outcome));
+                }
             });
         })
     }
@@ -254,6 +293,148 @@ impl Plugin for UdpPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "send_observation")]
+    use bytes::Bytes;
+    #[cfg(feature = "send_observation")]
+    use core::time::Duration;
+
+    #[test]
+    fn send_only_has_deferred_work_when_observation_is_compiled_in() {
+        let mut world = World::new();
+        let mut system = IntoSystem::into_system(UdpPlugin::send);
+        system.initialize(&mut world);
+        assert_eq!(system.has_deferred(), cfg!(feature = "send_observation"));
+    }
+
+    #[cfg(feature = "send_observation")]
+    #[derive(Resource, Default)]
+    struct SendOutcomes(Vec<UdpSendOutcome>);
+
+    #[cfg(feature = "send_observation")]
+    #[test]
+    fn send_outcomes_are_deferred_and_target_the_sending_link() {
+        let receiver = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let mut app = App::new();
+        app.add_plugins(UdpPlugin).init_resource::<SendOutcomes>();
+        let entity = app
+            .world_mut()
+            .spawn((
+                UdpIo::default(),
+                ObserveUdpSends,
+                LocalAddr("127.0.0.1:0".parse().unwrap()),
+                PeerAddr(receiver.local_addr().unwrap()),
+            ))
+            .observe(
+                |event: On<UdpSendOutcome>, mut outcomes: ResMut<SendOutcomes>| {
+                    outcomes.0.push(*event);
+                },
+            )
+            .id();
+        app.world_mut().trigger(LinkStart { entity });
+        app.world_mut().flush();
+        app.world_mut()
+            .get_mut::<Link>(entity)
+            .unwrap()
+            .send
+            .push(Bytes::from_static(b"data"));
+
+        let mut system = IntoSystem::into_system(UdpPlugin::send);
+        system.initialize(app.world_mut());
+        system
+            .run_without_applying_deferred((), app.world_mut())
+            .unwrap();
+        assert_eq!(app.world().get::<Link>(entity).unwrap().send.len(), 0);
+        assert!(app.world().resource::<SendOutcomes>().0.is_empty());
+        system.apply_deferred(app.world_mut());
+        assert_eq!(app.world().resource::<SendOutcomes>().0.len(), 1);
+        assert_eq!(app.world().resource::<SendOutcomes>().0[0].entity, entity);
+
+        app.world_mut()
+            .entity_mut(entity)
+            .remove::<ObserveUdpSends>();
+        app.world_mut()
+            .get_mut::<Link>(entity)
+            .unwrap()
+            .send
+            .push(Bytes::from_static(b"data"));
+        system.run((), app.world_mut()).unwrap();
+        assert_eq!(app.world().get::<Link>(entity).unwrap().send.len(), 0);
+        assert_eq!(app.world().resource::<SendOutcomes>().0.len(), 1);
+    }
+
+    #[cfg(feature = "send_observation")]
+    #[test]
+    fn send_reports_outcomes_and_drains_with_or_without_observer() {
+        for observe in [false, true] {
+            let receiver = UdpSocket::bind("127.0.0.1:0").unwrap();
+            receiver
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
+            let remote_addr = receiver.local_addr().unwrap();
+            let mut app = App::new();
+            app.add_plugins(UdpPlugin);
+            app.init_resource::<SendOutcomes>();
+            app.add_observer(
+                |event: On<UdpSendOutcome>, mut outcomes: ResMut<SendOutcomes>| {
+                    outcomes.0.push(*event);
+                },
+            );
+            let entity = app
+                .world_mut()
+                .spawn((
+                    UdpIo::default(),
+                    LocalAddr("127.0.0.1:0".parse().unwrap()),
+                    PeerAddr(remote_addr),
+                ))
+                .id();
+            if observe {
+                app.world_mut().entity_mut(entity).insert(ObserveUdpSends);
+            }
+            app.world_mut().trigger(LinkStart { entity });
+            app.world_mut().flush();
+            {
+                let mut link = app.world_mut().get_mut::<Link>(entity).unwrap();
+                link.send.push(Bytes::from_static(b"first"));
+                // Larger than the maximum IPv4 UDP payload: the syscall must fail.
+                link.send.push(Bytes::from(vec![0; 65_536]));
+                link.send.push(Bytes::from_static(b"last"));
+            }
+
+            app.world_mut().run_schedule(PostUpdate);
+            assert_eq!(app.world().get::<Link>(entity).unwrap().send.len(), 0);
+            // A later send pass must not retry or report any of these packets again.
+            app.world_mut().run_schedule(PostUpdate);
+
+            let outcomes = &app.world().resource::<SendOutcomes>().0;
+            if observe {
+                assert_eq!(outcomes.len(), 3);
+                for outcome in outcomes.iter() {
+                    assert_eq!(outcome.socket_entity, entity);
+                    assert_eq!(outcome.entity, entity);
+                    assert_eq!(outcome.remote_addr, remote_addr);
+                }
+                assert_eq!(outcomes[0].attempted_bytes, 5);
+                assert_eq!(outcomes[0].result, Ok(5));
+                assert_eq!(outcomes[1].attempted_bytes, 65_536);
+                assert!(outcomes[1].result.unwrap_err().raw_os_error.is_some());
+                assert_eq!(outcomes[2].attempted_bytes, 4);
+                assert_eq!(outcomes[2].result, Ok(4));
+            } else {
+                assert!(outcomes.is_empty());
+            }
+
+            let mut buffer = [0; 16];
+            for expected in [&b"first"[..], &b"last"[..]] {
+                let (len, _) = receiver.recv_from(&mut buffer).unwrap();
+                assert_eq!(&buffer[..len], expected);
+            }
+            receiver.set_nonblocking(true).unwrap();
+            assert_eq!(
+                receiver.recv_from(&mut buffer).unwrap_err().kind(),
+                ErrorKind::WouldBlock
+            );
+        }
+    }
 
     #[test]
     fn receive_buffer_pool_reclaims_a_published_datagram_after_drop() {

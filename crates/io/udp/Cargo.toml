@@ -10,6 +10,8 @@ repository = "https://github.com/cBournhonesque/lightyear"
 
 [features]
 default = []
+## Opt-in per-socket UDP send outcome events. Adds deferred send-system work when enabled.
+send_observation = []
 ## Enables multi-peer endpoints without selecting a server role.
 p2p = ["bevy_platform"]
 server = ["bevy_platform"]
