@@ -10,6 +10,7 @@ use crate::packet::message::{FragmentData, MessageAck, ReceiveMessage, SingleDat
 use crate::packet::packet_type::PacketType;
 #[cfg(feature = "test_utils")]
 use crate::prelude::{AppChannelExt, ChannelMode, ChannelSettings};
+#[cfg(feature = "packet_admission_observation")]
 use alloc::vec::Vec;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
@@ -28,7 +29,7 @@ use lightyear_core::tick::Tick;
 use lightyear_link::{Link, LinkPlugin, LinkSystems, Linked};
 use lightyear_serde::reader::{ReadInteger, Reader};
 use lightyear_serde::{SerializationError, ToBytes};
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(feature = "packet_admission_observation")))]
 use lightyear_utils::adaptive_for_each_mut;
 #[cfg(feature = "metrics")]
 use lightyear_utils::timer_gauge;
@@ -74,7 +75,13 @@ pub struct PacketLost {
 
 /// Enables [`PacketAdmitted`] events for packets queued by this [`Transport`].
 ///
+/// Requires the default-disabled `packet_admission_observation` Cargo feature.
+/// Disabling that feature removes admission observation from the send system,
+/// including its deferred-command parameters and marker checks.
+///
 /// Without this component, admission does not allocate event metadata or queue events.
+/// The enabled feature still adds deferred-command synchronization to the system,
+/// even when no entity has the marker.
 /// When enabled, each data packet allocates a channel list and queues one deferred ECS
 /// event; ACK-only packets queue an event with an empty list. No packet payload is
 /// copied or exposed. Removing the component disables subsequent notifications, but
@@ -100,6 +107,7 @@ pub struct PacketLost {
 /// world.add_observer(count_admitted);
 /// world.spawn((Transport::default(), ObservePacketAdmissions));
 /// ```
+#[cfg(feature = "packet_admission_observation")]
 #[derive(Component, Default, Debug, Clone, Copy)]
 pub struct ObservePacketAdmissions;
 
@@ -119,6 +127,7 @@ pub struct ObservePacketAdmissions;
 /// send system finishes. Events for one entity follow admission order; no order
 /// across entities is promised. Observers may borrow the event during their call
 /// or retain their own metadata copy. The event carries no payload or admission controls.
+#[cfg(feature = "packet_admission_observation")]
 #[derive(EntityEvent, Debug, Clone)]
 pub struct PacketAdmitted {
     /// The entity containing the transport and link that admitted the packet.
@@ -464,9 +473,11 @@ impl TransportPlugin {
     fn buffer_send(
         real_time: Res<Time<Real>>,
         timeline: Res<LocalTimeline>,
-        #[cfg(feature = "std")] par_commands: ParallelCommands,
-        #[cfg(not(feature = "std"))] mut commands: Commands,
-        mut query: Query<
+        #[cfg(all(feature = "packet_admission_observation", feature = "std"))]
+        par_commands: ParallelCommands,
+        #[cfg(all(feature = "packet_admission_observation", not(feature = "std")))]
+        mut commands: Commands,
+        #[cfg(feature = "packet_admission_observation")] mut query: Query<
             (
                 Entity,
                 &mut Link,
@@ -476,16 +487,24 @@ impl TransportPlugin {
             ),
             With<Linked>,
         >,
+        #[cfg(not(feature = "packet_admission_observation"))] mut query: Query<
+            (&mut Link, &mut Transport, Option<&mut HostClient>),
+            With<Linked>,
+        >,
         channel_registry: Res<ChannelRegistry>,
     ) {
         #[cfg(feature = "metrics")]
         let _timer = timer_gauge!("transport/send");
         let tick = timeline.tick();
-        #[cfg(feature = "std")]
+        #[cfg(any(feature = "std", not(feature = "packet_admission_observation")))]
         let query = adaptive_for_each_mut!(query);
-        #[cfg(not(feature = "std"))]
+        #[cfg(all(feature = "packet_admission_observation", not(feature = "std")))]
         let query = query.iter_mut();
-        query.for_each(|(entity, mut link, mut transport, host_client, observe_admissions)| {
+        query.for_each(|item| {
+            #[cfg(feature = "packet_admission_observation")]
+            let (entity, mut link, mut transport, host_client, observe_admissions) = item;
+            #[cfg(not(feature = "packet_admission_observation"))]
+            let (mut link, mut transport, host_client) = item;
             // allow split borrows
             let transport = &mut *transport;
             let mtu = link.mtu();
@@ -607,6 +626,7 @@ impl TransportPlugin {
                     .packet_manager
                     .header_manager
                     .commit_send_packet(packet_id, real_time.elapsed());
+                #[cfg(feature = "packet_admission_observation")]
                 if observe_admissions {
                     let event = PacketAdmitted {
                         entity,
@@ -708,6 +728,7 @@ impl TransportPlugin {
                             .packet_manager
                             .header_manager
                             .commit_send_ack_only(packet_id);
+                        #[cfg(feature = "packet_admission_observation")]
                         if observe_admissions {
                             let event = PacketAdmitted {
                                 entity,
@@ -814,16 +835,30 @@ mod tests {
     use crate::packet::header::PacketHeaderManager;
     use crate::packet::packet::PacketId;
     use crate::packet::priority_manager::PriorityConfig;
-    use bevy_ecs::system::RunSystemOnce;
+    use bevy_ecs::system::{IntoSystem, RunSystemOnce, System};
 
     struct RetryChannel;
     struct DiscardChannel;
     struct SmallMtuChannel;
     struct AckBeforeTimeoutChannel;
 
+    #[test]
+    fn send_system_defers_only_with_admission_observation_feature() {
+        let mut world = World::new();
+        let mut system = IntoSystem::into_system(TransportPlugin::buffer_send);
+        system.initialize(&mut world);
+        assert_eq!(
+            system.has_deferred(),
+            cfg!(feature = "packet_admission_observation"),
+            "default send must not introduce an admission-observation synchronization point"
+        );
+    }
+
+    #[cfg(feature = "packet_admission_observation")]
     #[derive(Resource, Default)]
     struct Admissions(Vec<PacketAdmitted>);
 
+    #[cfg(feature = "packet_admission_observation")]
     fn admission_test_app(registry: ChannelRegistry) -> App {
         let mut app = App::new();
         app.add_plugins(bevy_app::TaskPoolPlugin::default());
@@ -840,6 +875,7 @@ mod tests {
     }
 
     /// Decode actual wire contents independently of packet-builder metadata.
+    #[cfg(feature = "packet_admission_observation")]
     fn packet_channels(packet: Bytes) -> (PacketId, Vec<ChannelId>) {
         let mut reader = Reader::from(packet);
         let header = PacketHeader::from_bytes(&mut reader).unwrap();
@@ -860,6 +896,7 @@ mod tests {
         (header.packet_id, channels)
     }
 
+    #[cfg(feature = "packet_admission_observation")]
     #[test]
     fn admission_events_preserve_bytes_and_report_each_packets_channels() {
         let settings = ChannelSettings::default();
@@ -959,6 +996,7 @@ mod tests {
         assert_eq!(world.resource::<Admissions>().0.len(), previous_count);
     }
 
+    #[cfg(feature = "packet_admission_observation")]
     #[test]
     fn bandwidth_denied_packets_do_not_emit_admission_events() {
         let settings = ChannelSettings {
@@ -984,6 +1022,7 @@ mod tests {
         assert_eq!(events[0].channels, [id]);
     }
 
+    #[cfg(feature = "packet_admission_observation")]
     #[test]
     fn ack_only_admission_has_empty_channels_and_is_emitted_once() {
         let mut app = admission_test_app(ChannelRegistry::default());
@@ -1025,6 +1064,7 @@ mod tests {
         assert_eq!(world.get::<Link>(entity).unwrap().send.len(), 0);
     }
 
+    #[cfg(feature = "packet_admission_observation")]
     #[test]
     fn host_client_messages_do_not_emit_packet_admission_events() {
         let settings = ChannelSettings::default();
@@ -1054,7 +1094,7 @@ mod tests {
         assert!(world.resource::<Admissions>().0.is_empty());
     }
 
-    #[cfg(feature = "compression_lz4")]
+    #[cfg(all(feature = "packet_admission_observation", feature = "compression_lz4"))]
     #[test]
     fn admission_byte_count_uses_compressed_packet_length() {
         let settings = ChannelSettings::default();
