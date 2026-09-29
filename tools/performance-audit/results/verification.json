@@ -1,0 +1,66 @@
+[
+  {
+    "name": "udp-all",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "lightyear_udp",
+      "--all-features",
+      "--locked",
+      "--offline",
+      "--config",
+      "profile.dev.package.\"*\".opt-level=0",
+      "--",
+      "--test-threads=1"
+    ],
+    "cwd": "/Users/gw/wally/contributions/lightyear",
+    "exit_code": 0
+  },
+  {
+    "name": "transport-full",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "lightyear_transport",
+      "--all-features",
+      "--features",
+      "lz4_flex/alloc",
+      "--locked",
+      "--offline",
+      "--config",
+      "profile.dev.package.\"*\".opt-level=0",
+      "--",
+      "--test-threads=1"
+    ],
+    "cwd": "/Users/gw/wally/contributions/lightyear-transport",
+    "exit_code": 101
+  },
+  {
+    "name": "schedule-default",
+    "command": [
+      "cargo",
+      "run",
+      "--locked",
+      "--offline",
+      "--config",
+      "profile.dev.package.\"*\".opt-level=0"
+    ],
+    "cwd": "/Users/gw/wally/contributions/schedule-compat-probe",
+    "exit_code": 0
+  },
+  {
+    "name": "guide-example",
+    "command": [
+      "cargo",
+      "run",
+      "--locked",
+      "--offline",
+      "--config",
+      "profile.dev.package.\"*\".opt-level=0"
+    ],
+    "cwd": "/Users/gw/wally/contributions/observation-guide-validation",
+    "exit_code": 0
+  }
+]

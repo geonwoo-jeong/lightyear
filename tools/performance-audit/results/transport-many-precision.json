@@ -1,0 +1,2542 @@
+{
+  "started_utc": "2026-09-29T13:33:10.202303+00:00",
+  "platform": "Darwin-25.1.0-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "logical_cpus": 10,
+  "binaries": {
+    "baseline": {
+      "path": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+      "sha256": "4b9a6e18eb288827674052236d15a6c3fae39d47a4c16c52bb66eaaeb8b609fa"
+    },
+    "candidate": {
+      "path": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+      "sha256": "0b2b915e3f87e408a70348f47675d9b693f2cde02fd38037e4c0c11fcc91a72f"
+    }
+  },
+  "harness_sha256": "c0a749950a2c0c1decc330be4073e54d7537d22d634cf0c05c68eaf0586a864b",
+  "launch": {
+    "argv0": "performance-audit",
+    "cwd": "/Users/gw/wally/contributions/performance-audit",
+    "executable_selection": "subprocess executable parameter"
+  },
+  "metric": "schedule_elapsed_ns (wall-clock elapsed time, NOT process CPU time)",
+  "practical_regression_ratio": 1.05,
+  "bootstrap": {
+    "statistic": "median of paired candidate/baseline ratios",
+    "resamples": 10000,
+    "seed": 320825,
+    "interval": "percentile 95%"
+  },
+  "scenarios": {
+    "transport-many": {
+      "pairs": [
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 384273461,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 373282597,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 380752936,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 366776561,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 361766249,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 376996144,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 391588853,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 375090489,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 373862159,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 421870860,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 391789337,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 388751598,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 439895666,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 369058707,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 368406761,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 368596271,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 371479181,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 371934293,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 371848722,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 365639395,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 371112820,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 372981224,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 395869722,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 370499014,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 371163585,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 377512290,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 374009318,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 363751557,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 363511011,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 373313919,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 385360166,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 384898674,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 369964652,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 369684354,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 385885727,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 371841296,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 364774507,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 370852096,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 364786355,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 355931624,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 358677303,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 384179292,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 371658868,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 366836338,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 362691275,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 367138621,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 371460716,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 373460034,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 378985925,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 381880645,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 373423545,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 355683712,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 361192633,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 419442442,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 381541041,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 370745615,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 359683676,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 367695653,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "candidate",
+            "baseline"
+          ],
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 408787511,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 379957775,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        },
+        {
+          "order": [
+            "baseline",
+            "candidate"
+          ],
+          "baseline": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 375550831,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          },
+          "candidate": {
+            "command": [
+              "performance-audit",
+              "--scenario",
+              "transport-many",
+              "--iterations",
+              "5000"
+            ],
+            "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+            "cwd": "/Users/gw/wally/contributions/performance-audit",
+            "result": {
+              "harness_version": 2,
+              "scenario": "transport-many",
+              "iterations": 5000,
+              "warmup_batches": 100,
+              "observe": false,
+              "allocation_counting": false,
+              "udp_observation_api": false,
+              "transport_observation_api": false,
+              "schedule_elapsed_ns": 386064711,
+              "receive_schedule_calls": 0,
+              "extra_receive_schedule_calls": 0,
+              "packets": 1600000,
+              "bytes": 736320000,
+              "messages": 960000,
+              "checksum": 22478720000,
+              "observation_packets": 0,
+              "allocations": 0,
+              "allocated_bytes": 0,
+              "reallocations": 0,
+              "reallocated_bytes": 0,
+              "deallocations": 0,
+              "deallocated_bytes": 0
+            },
+            "stderr": ""
+          }
+        }
+      ],
+      "allocations": {
+        "baseline": {
+          "command": [
+            "performance-audit",
+            "--scenario",
+            "transport-many",
+            "--iterations",
+            "100",
+            "--count-allocations"
+          ],
+          "executable": "/Users/gw/wally/contributions/performance-audit/binaries/baseline-final",
+          "cwd": "/Users/gw/wally/contributions/performance-audit",
+          "result": {
+            "harness_version": 2,
+            "scenario": "transport-many",
+            "iterations": 100,
+            "warmup_batches": 100,
+            "observe": false,
+            "allocation_counting": true,
+            "udp_observation_api": false,
+            "transport_observation_api": false,
+            "schedule_elapsed_ns": 7137953,
+            "receive_schedule_calls": 0,
+            "extra_receive_schedule_calls": 0,
+            "packets": 32000,
+            "bytes": 14726400,
+            "messages": 19200,
+            "checksum": 449574400,
+            "observation_packets": 0,
+            "allocations": 6464,
+            "allocated_bytes": 2972160,
+            "reallocations": 128,
+            "reallocated_bytes": 3801088,
+            "deallocations": 7104,
+            "deallocated_bytes": 3657216
+          },
+          "stderr": ""
+        },
+        "candidate": {
+          "command": [
+            "performance-audit",
+            "--scenario",
+            "transport-many",
+            "--iterations",
+            "100",
+            "--count-allocations"
+          ],
+          "executable": "/Users/gw/wally/contributions/performance-audit/binaries/candidate-default-final",
+          "cwd": "/Users/gw/wally/contributions/performance-audit",
+          "result": {
+            "harness_version": 2,
+            "scenario": "transport-many",
+            "iterations": 100,
+            "warmup_batches": 100,
+            "observe": false,
+            "allocation_counting": true,
+            "udp_observation_api": false,
+            "transport_observation_api": false,
+            "schedule_elapsed_ns": 7218833,
+            "receive_schedule_calls": 0,
+            "extra_receive_schedule_calls": 0,
+            "packets": 32000,
+            "bytes": 14726400,
+            "messages": 19200,
+            "checksum": 449574400,
+            "observation_packets": 0,
+            "allocations": 6464,
+            "allocated_bytes": 2972160,
+            "reallocations": 128,
+            "reallocated_bytes": 3801088,
+            "deallocations": 7104,
+            "deallocated_bytes": 3657216
+          },
+          "stderr": ""
+        }
+      },
+      "summary": {
+        "baseline_median_ns_per_batch": 74099.8028,
+        "candidate_median_ns_per_batch": 74801.8636,
+        "median_paired_ratio": 1.0222750642706397,
+        "paired_ratio_95_percent_interval": [
+          1.0122620705447078,
+          1.0291181488417604
+        ],
+        "verdict": "95% interval upper bound within 5% threshold"
+      }
+    }
+  },
+  "finished_utc": "2026-09-29T13:34:17.980483+00:00",
+  "all_within_threshold": true
+}
