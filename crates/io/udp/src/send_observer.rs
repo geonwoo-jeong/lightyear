@@ -4,6 +4,12 @@ use std::io::{self, ErrorKind};
 
 /// Opts a UDP socket into [`UdpSendOutcome`] events.
 ///
+/// Requires the crate's `send_observation` feature (disabled by default), or
+/// `lightyear/udp_send_observation` together with `lightyear/udp`.
+/// With the feature disabled, the original send query and non-deferred system are retained.
+/// Enabling the feature adds a deferred scheduling boundary even on unmarked sockets;
+/// the marker controls per-packet event work. Cargo features can be enabled transitively.
+///
 /// Insert this component on a [`crate::UdpIo`] or `UdpEndpoint` entity.
 /// For an endpoint, outcomes target its child links and identify the socket separately.
 /// Remove the component to stop queuing new events; already queued events still run.

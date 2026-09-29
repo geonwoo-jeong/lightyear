@@ -29,7 +29,9 @@ use lightyear_link::{
 use lightyear_utils::adaptive_for_each_mut;
 use tracing::{error, info, trace};
 
+#[cfg(feature = "send_observation")]
 mod send_observer;
+#[cfg(feature = "send_observation")]
 pub use send_observer::{ObserveUdpSends, UdpSendError, UdpSendOutcome};
 
 /// Peer-discovery glue for [`lightyear_p2p::Lobby`].
@@ -55,7 +57,9 @@ pub mod server;
 
 /// Re-exports commonly needed by applications and transport setup code.
 pub mod prelude {
-    pub use crate::{ObserveUdpSends, UdpIo, UdpSendError, UdpSendOutcome};
+    pub use crate::UdpIo;
+    #[cfg(feature = "send_observation")]
+    pub use crate::{ObserveUdpSends, UdpSendError, UdpSendOutcome};
 
     /// UDP endpoint prelude: the transport's socket and per-peer link fan-out.
     ///
@@ -170,8 +174,12 @@ impl UdpPlugin {
     }
 
     fn send(
-        commands: ParallelCommands,
-        mut query: Query<
+        #[cfg(feature = "send_observation")] commands: ParallelCommands,
+        #[cfg(not(feature = "send_observation"))] mut query: Query<
+            (&mut Link, &mut UdpIo, &PeerAddr),
+            With<Linked>,
+        >,
+        #[cfg(feature = "send_observation")] mut query: Query<
             (
                 Entity,
                 &mut Link,
@@ -182,31 +190,36 @@ impl UdpPlugin {
             With<Linked>,
         >,
     ) {
-        adaptive_for_each_mut!(query).for_each(
-            |(entity, mut link, mut udp_io, remote_addr, observe)| {
-                link.send.drain().for_each(|payload| {
-                    // B/s
-                    #[cfg(feature = "metrics")]
-                    metrics::gauge!("udp/send").increment(payload.len() as f64);
-                    let result = udp_io
-                        .socket
-                        .as_mut()
-                        .unwrap()
-                        .send_to(payload.as_ref(), remote_addr.0)
-                        .inspect_err(|e| error!("Error sending UDP packet: {}", e));
-                    if observe {
-                        let outcome = UdpSendOutcome::from_result(
-                            entity,
-                            entity,
-                            remote_addr.0,
-                            payload.len(),
-                            &result,
-                        );
-                        commands.command_scope(|mut commands| commands.trigger(outcome));
-                    }
-                });
-            },
-        )
+        adaptive_for_each_mut!(query).for_each(|item| {
+            #[cfg(feature = "send_observation")]
+            let (entity, mut link, mut udp_io, remote_addr, observe) = item;
+            #[cfg(not(feature = "send_observation"))]
+            let (mut link, mut udp_io, remote_addr) = item;
+            link.send.drain().for_each(|payload| {
+                // B/s
+                #[cfg(feature = "metrics")]
+                metrics::gauge!("udp/send").increment(payload.len() as f64);
+                let result = udp_io
+                    .socket
+                    .as_mut()
+                    .unwrap()
+                    .send_to(payload.as_ref(), remote_addr.0)
+                    .inspect_err(|e| error!("Error sending UDP packet: {}", e));
+                #[cfg(not(feature = "send_observation"))]
+                let _ = result;
+                #[cfg(feature = "send_observation")]
+                if observe {
+                    let outcome = UdpSendOutcome::from_result(
+                        entity,
+                        entity,
+                        remote_addr.0,
+                        payload.len(),
+                        &result,
+                    );
+                    commands.command_scope(|mut commands| commands.trigger(outcome));
+                }
+            });
+        })
     }
 
     fn receive(mut query: Query<(&mut Link, &mut UdpIo), With<Linked>>) {
@@ -280,12 +293,24 @@ impl Plugin for UdpPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "send_observation")]
     use bytes::Bytes;
+    #[cfg(feature = "send_observation")]
     use core::time::Duration;
 
+    #[test]
+    fn send_only_has_deferred_work_when_observation_is_compiled_in() {
+        let mut world = World::new();
+        let mut system = IntoSystem::into_system(UdpPlugin::send);
+        system.initialize(&mut world);
+        assert_eq!(system.has_deferred(), cfg!(feature = "send_observation"));
+    }
+
+    #[cfg(feature = "send_observation")]
     #[derive(Resource, Default)]
     struct SendOutcomes(Vec<UdpSendOutcome>);
 
+    #[cfg(feature = "send_observation")]
     #[test]
     fn send_outcomes_are_deferred_and_target_the_sending_link() {
         let receiver = UdpSocket::bind("127.0.0.1:0").unwrap();
@@ -337,6 +362,7 @@ mod tests {
         assert_eq!(app.world().resource::<SendOutcomes>().0.len(), 1);
     }
 
+    #[cfg(feature = "send_observation")]
     #[test]
     fn send_reports_outcomes_and_drains_with_or_without_observer() {
         for observe in [false, true] {
