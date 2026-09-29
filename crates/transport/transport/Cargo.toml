@@ -17,6 +17,8 @@ compression = []
 compression_lz4 = ["compression", "dep:lz4_flex"]
 metrics = ["dep:metrics", "std", "lightyear_utils/metrics", "bevy_utils/debug"]
 trace = []
+# Opt-in packet metadata events; excluded from the default send system.
+packet_admission_observation = []
 
 test_utils = []
 
