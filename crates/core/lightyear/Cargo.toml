@@ -149,6 +149,8 @@ metrics = [
   "lightyear_udp?/metrics",
 ]
 debug = ["dep:lightyear_tools", "metrics"]
+## Enable opt-in ECS events for packets admitted into the transport send queue.
+packet_admission_observation = ["lightyear_transport/packet_admission_observation"]
 compression = ["lightyear_transport/compression"]
 compression_lz4 = ["compression", "lightyear_transport/compression_lz4"]
 
@@ -176,6 +178,8 @@ avian_xpbd_joints = [
 # IO LAYERS
 ## Enables UDP as an IO layer
 udp = ["dep:lightyear_udp", "std"]
+## Enables optional UDP send outcome events; also select `udp` to install that backend.
+udp_send_observation = ["lightyear_udp?/send_observation"]
 ## Enables crossbeam channels as an IO layer
 ##
 ## This is useful when running a client and server in two processes of the same machine so that a client can act as the host

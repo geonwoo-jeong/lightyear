@@ -25,7 +25,9 @@ use bevy_ecs::relationship::RelationshipTarget;
 use bevy_ecs::system::ParallelCommands;
 use tracing::{debug, error, info};
 
-use crate::{ObserveUdpSends, UdpError, UdpSendOutcome};
+use crate::UdpError;
+#[cfg(feature = "send_observation")]
+use crate::{ObserveUdpSends, UdpSendOutcome};
 use aeronet_io::connection::{LocalAddr, PeerAddr};
 use bevy_platform::collections::{HashMap, hash_map::Entry};
 use bytes::BufMut;
@@ -141,46 +143,54 @@ impl UdpEndpointPlugin {
     }
 
     fn send(
-        mut commands: Commands,
-        mut endpoint_query: Query<
+        #[cfg(feature = "send_observation")] mut commands: Commands,
+        #[cfg(not(feature = "send_observation"))] mut endpoint_query: Query<
+            (&mut UdpEndpoint, &Endpoint),
+            With<Linked>,
+        >,
+        #[cfg(feature = "send_observation")] mut endpoint_query: Query<
             (Entity, &mut UdpEndpoint, &Endpoint, Has<ObserveUdpSends>),
             With<Linked>,
         >,
         mut link_query: Query<(&mut Link, &PeerAddr), With<UdpLinkOfIO>>,
     ) {
         // TODO: parallelize
-        endpoint_query.iter_mut().for_each(
-            |(endpoint_entity, mut udp_endpoint, endpoint, observe)| {
-                endpoint.collection().iter().for_each(|peer_entity| {
-                    let Some((mut link, remote_addr)) = link_query.get_mut(*peer_entity).ok()
-                    else {
-                        // Not all links are UDP links, so we might not want this to ever print
-                        debug!("Peer entity {} not found in link query", peer_entity);
-                        return;
-                    };
+        endpoint_query.iter_mut().for_each(|item| {
+            #[cfg(feature = "send_observation")]
+            let (endpoint_entity, mut udp_endpoint, endpoint, observe) = item;
+            #[cfg(not(feature = "send_observation"))]
+            let (mut udp_endpoint, endpoint) = item;
+            endpoint.collection().iter().for_each(|peer_entity| {
+                let Some((mut link, remote_addr)) = link_query.get_mut(*peer_entity).ok() else {
+                    // Not all links are UDP links, so we might not want this to ever print
+                    debug!("Peer entity {} not found in link query", peer_entity);
+                    return;
+                };
 
-                    link.send.drain().for_each(|send_payload| {
-                        let result = udp_endpoint
-                            .socket
-                            .as_mut()
-                            .unwrap()
-                            .send_to(send_payload.as_ref(), remote_addr.0)
-                            .inspect_err(|e| {
-                                error!("Error sending UDP packet to {}: {}", remote_addr.0, e);
-                            });
-                        if observe {
-                            commands.trigger(UdpSendOutcome::from_result(
-                                endpoint_entity,
-                                *peer_entity,
-                                remote_addr.0,
-                                send_payload.len(),
-                                &result,
-                            ));
-                        }
-                    });
+                link.send.drain().for_each(|send_payload| {
+                    let result = udp_endpoint
+                        .socket
+                        .as_mut()
+                        .unwrap()
+                        .send_to(send_payload.as_ref(), remote_addr.0)
+                        .inspect_err(|e| {
+                            error!("Error sending UDP packet to {}: {}", remote_addr.0, e);
+                        });
+                    #[cfg(not(feature = "send_observation"))]
+                    let _ = result;
+                    #[cfg(feature = "send_observation")]
+                    if observe {
+                        commands.trigger(UdpSendOutcome::from_result(
+                            endpoint_entity,
+                            *peer_entity,
+                            remote_addr.0,
+                            send_payload.len(),
+                            &result,
+                        ));
+                    }
                 });
-            },
-        );
+            });
+        });
     }
 
     fn receive(
@@ -335,20 +345,34 @@ impl Plugin for UdpEndpointPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "send_observation")]
     use bytes::Bytes;
     use core::net::Ipv4Addr;
+    #[cfg(feature = "send_observation")]
     use core::time::Duration;
     use lightyear_link::prelude::LinkConditionerConfig;
     use lightyear_link::{RecvLinkConditioner, UnlinkReason};
+    #[cfg(feature = "send_observation")]
     use std::io::ErrorKind;
+    #[cfg(feature = "send_observation")]
     use std::net::UdpSocket;
 
     #[derive(Resource, Default)]
     struct UnlinkedChildren(Vec<Entity>);
 
+    #[test]
+    fn send_only_has_deferred_work_when_observation_is_compiled_in() {
+        let mut world = World::new();
+        let mut system = IntoSystem::into_system(UdpEndpointPlugin::send);
+        system.initialize(&mut world);
+        assert_eq!(system.has_deferred(), cfg!(feature = "send_observation"));
+    }
+
+    #[cfg(feature = "send_observation")]
     #[derive(Resource, Default)]
     struct SendOutcomes(Vec<UdpSendOutcome>);
 
+    #[cfg(feature = "send_observation")]
     #[test]
     fn send_reports_endpoint_and_peer_context_with_or_without_observer() {
         for observe in [false, true] {
