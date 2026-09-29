@@ -149,6 +149,8 @@ metrics = [
   "lightyear_udp?/metrics",
 ]
 debug = ["dep:lightyear_tools", "metrics"]
+## Enable opt-in ECS events for packets admitted into the transport send queue.
+packet_admission_observation = ["lightyear_transport/packet_admission_observation"]
 compression = ["lightyear_transport/compression"]
 compression_lz4 = ["compression", "lightyear_transport/compression_lz4"]
 
